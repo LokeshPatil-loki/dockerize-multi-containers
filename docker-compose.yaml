@@ -1,0 +1,51 @@
+version: "3"
+services:
+# Postgres Container
+  postgres:
+    image: 'postgres:latest'
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=root
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    container_name: pgadmin4_container
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5050:80"
+
+# Redis Container
+  redis:
+    image: 'redis:latest'
+# Express Server Container
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    volumes:
+      - /app/node_modules
+      - ./server:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PGUSER=postgres
+      - PGPASSWORD=postgres_password
+      - PGDATABASE=postgres
+      - PGHOST=postgres
+      - PGPORT=5432
+  
+
+  # client:
+  #   build:
+  #     context: ./client/
+  #     dockerfile: Dockerfile.dev
+  #   ports:
+  #     - "5173:5173"
+  #   volumes:
+  #     - "/app/node_modules"
+  #     - "client/src:/app/src"
