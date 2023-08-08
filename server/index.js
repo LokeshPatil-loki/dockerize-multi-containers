@@ -1,15 +1,19 @@
-const keys = require("./keys");
-
+// const keys = require("./keys");
+import keys from "./keys.js";
 // Express App Setup
-const express = require("express");
-const cors = require("cors");
+import express from "express";
+// const express = require("express");
+import cors from "cors";
+// const cors = require("cors");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 // Postgres client setup
-const {Pool} = require("pg");
+// const {Pool} = require("pg");
+import pg from "pg";
+const {Pool} = pg;
 const pgClient = new Pool({
     user: keys.pgUser,
     host: keys.pgHost,
@@ -27,16 +31,39 @@ pgClient
     .catch(err => console.log(err));
 
 // RedisClient setup
-const redis = require("redis");
+// const redis = require("redis");
+import redis from "redis";
+
 const redisClient = redis.createClient({
     url: `redis://${keys.redisHost}:${keys.redisPort}`,
     retry_strategy: () => 1000
 });
 
-redisClient.connect();
+
+
+redisClient.on('connect', () => {
+    console.log('Connected to Redis12345');
+})
+
+redisClient.on('error', (err) => {
+    console.log(err.message);
+})
+
+redisClient.on('ready', () => {
+    console.log('Redis is ready');
+})
+
+redisClient.on('end', () => {
+    console.log('Redis connection ended');
+})
+
+process.on('SIGINT', () => {
+    redisClient.quit();
+})
+
+await redisClient.connect();
 
 const redisPublisher = redisClient.duplicate();
-
 // Express route handlers
 
 app.get("/",(req,res) => {
@@ -54,15 +81,49 @@ app.get("/values/current", async (req,res) => {
     })
 });
 
-app.post("/values",async(req,res) => {
-    const index = req.body.index;
-    if(parseInt(index) > 40){
-        return res.status(422).send("Index too high");
+// app.post("/values",async(req,res) => {
+//     try {
+//         const index = req.body.index;
+//         if(parseInt(index) > 40){
+//             return res.status(422).send("Index too high");
+//         }
+//         console.log(redisClient.isOpen)
+//         redisClient.hSet("values", index, "Nothing Yet!");
+//         redisPublisher.publish("insert", index);
+//         pgClient.query(`INSERT INTO values(number) VALUES($1)`,[index]);
+//         res.send({working: true});
+//     } catch (error) {
+//         console.log(error);
+//     }
+// });
+
+app.post("/values", async (req, res) => {
+    try {
+        const index = req.body.index;
+        if (parseInt(index) > 40) {
+            return res.status(422).send("Index too high");
+        }
+
+        // It's not clear how `redisClient` and `redisPublisher` are being initialized.
+        // Assuming `redisPublisher` is for publishing, make sure it's properly initialized.
+
+        // Check if `redisClient` is open before using it
+        if (redisClient.isOpen) {
+            redisClient.hSet("values", index, "Nothing Yet!");
+            // Assuming this operation is asynchronous, handle it properly
+            await redisPublisher.publish("insert", index);
+        } else {
+            // Handle the case where `redisClient` is not open
+            return res.status(500).send("Redis client is closed");
+        }
+
+        // The rest of your code...
+
+        res.send({ working: true });
+    } catch (error) {
+        console.log(error);
+        res.status(500).send("Internal server error");
     }
-    redisClient.hSet("values", index, "Nothing Yet!");
-    redisPublisher.publish("insert", index);
-    pgClient.query(`INSERT INTO values(number) VALUES($1)`,[index]);
-    res.send({working: true});
 });
 
 app.listen(5000, err => {

@@ -48,7 +48,7 @@ const Fib = (props) => {
     }
 
     return <div>
-        <form >
+        <form onSubmit={handleSubmit}>
             <label>Enter your index: </label>
             <input value={index} onChange={e => setIndex(e.target.value)} name="index" id="index" />
             <input type="submit" value="Submit" />
