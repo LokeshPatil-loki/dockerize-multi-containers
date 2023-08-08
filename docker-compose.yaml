@@ -1,20 +1,18 @@
 version: "3"
 services:
-# Postgres Container
   postgres:
     image: 'postgres:latest'
     environment:
-      - POSTGRES_USER=root
-      - POSTGRES_PASSWORD=root
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     ports:
       - "5432:5432"
+    volumes:
+      - data:/var/lib/postgresql/data
 
-
-
-# Redis Container
   redis:
     image: 'redis:latest'
-# Express Server Container
+
   server:
     build:
       context: ./server
@@ -26,28 +24,39 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - PGUSER=postgres
-      - PGPASSWORD=postgres_password
+      - PGPASSWORD=postgres
       - PGDATABASE=postgres
       - PGHOST=postgres
       - PGPORT=5432
-  
 
-  # client:
-  #   build:
-  #     context: ./client/
-  #     dockerfile: Dockerfile.dev
-  #   ports:
-  #     - "5173:5173"
-  #   volumes:
-  #     - "/app/node_modules"
-  #     - "client/src:/app/src"
-
-  pgadmin:
-    container_name: pgadmin4_container
-    image: dpage/pgadmin4
-    restart: always
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile.dev
+    volumes:
+      - /app/node_modules # Bookmark or Don't touch node_modules inside container app directory
+      - ./worker:/app # user all files from worker directory inside container
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: root
-    ports:
-      - "5050:80"
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    volumes:
+      - /app/node_modules
+      - ./client:/app
+
+  # pgadmin:
+  #   container_name: pgadmin4_container
+  #   image: dpage/pgadmin4
+  #   restart: always
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: admin@admin.com
+  #     PGADMIN_DEFAULT_PASSWORD: root
+  #   ports:
+  #     - "5050:80"
+
+volumes:
+  data:
