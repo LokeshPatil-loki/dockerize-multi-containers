@@ -32,7 +32,7 @@ const Fib = (props) => {
         for(let key in values){
             entries.push(
                 <div key={key}>
-                    For index {key} I calculated {value[key]}
+                    For index {key} I calculated {values[key]}
                 </div>
             )
         }
