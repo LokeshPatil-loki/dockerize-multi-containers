@@ -15,5 +15,5 @@
   },
   "dependencies": {
     "redis": "^4.6.7"
-  }
+  },"type": "module"
 }
