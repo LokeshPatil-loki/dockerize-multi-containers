@@ -64,6 +64,8 @@ process.on('SIGINT', () => {
 await redisClient.connect();
 
 const redisPublisher = redisClient.duplicate();
+await redisPublisher.connect();
+
 // Express route handlers
 
 app.get("/",(req,res) => {
@@ -81,50 +83,22 @@ app.get("/values/current", async (req,res) => {
     })
 });
 
-// app.post("/values",async(req,res) => {
-//     try {
-//         const index = req.body.index;
-//         if(parseInt(index) > 40){
-//             return res.status(422).send("Index too high");
-//         }
-//         console.log(redisClient.isOpen)
-//         redisClient.hSet("values", index, "Nothing Yet!");
-//         redisPublisher.publish("insert", index);
-//         pgClient.query(`INSERT INTO values(number) VALUES($1)`,[index]);
-//         res.send({working: true});
-//     } catch (error) {
-//         console.log(error);
-//     }
-// });
-
-app.post("/values", async (req, res) => {
+app.post("/values",async(req,res) => {
     try {
         const index = req.body.index;
-        if (parseInt(index) > 40) {
+        if(parseInt(index) > 40){
             return res.status(422).send("Index too high");
         }
-
-        // It's not clear how `redisClient` and `redisPublisher` are being initialized.
-        // Assuming `redisPublisher` is for publishing, make sure it's properly initialized.
-
-        // Check if `redisClient` is open before using it
-        if (redisClient.isOpen) {
-            redisClient.hSet("values", index, "Nothing Yet!");
-            // Assuming this operation is asynchronous, handle it properly
-            await redisPublisher.publish("insert", index);
-        } else {
-            // Handle the case where `redisClient` is not open
-            return res.status(500).send("Redis client is closed");
-        }
-
-        // The rest of your code...
-
-        res.send({ working: true });
+        redisClient.hSet("values", index, "Nothing Yet!");
+        redisPublisher.publish("insert", JSON.stringify(index));
+        pgClient.query(`INSERT INTO values(number) VALUES($1)`,[index]);
+        res.send({working: true});
     } catch (error) {
         console.log(error);
-        res.status(500).send("Internal server error");
     }
 });
+
+
 
 app.listen(5000, err => {
     console.log("Listening");
