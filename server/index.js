@@ -90,7 +90,7 @@ app.post("/values",async(req,res) => {
             return res.status(422).send("Index too high");
         }
         redisClient.hSet("values", index, "Nothing Yet!");
-        redisPublisher.publish("insert", JSON.stringify(index));
+        redisPublisher.publish("insert", String(index));
         pgClient.query(`INSERT INTO values(number) VALUES($1)`,[index]);
         res.send({working: true});
     } catch (error) {
